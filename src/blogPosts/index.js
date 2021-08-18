@@ -1,11 +1,7 @@
 import express from "express";
-
 import fs from "fs";
-
 import uniqid from "uniqid";
-
 import path, { dirname } from "path";
-
 import { fileURLToPath } from "url";
 import { parseFile } from "../utils/upload/index.js";
 
@@ -15,6 +11,9 @@ import {
   checkSearchSchema,
   checkValidationResult,
 } from "./validation.js";
+import { getPDFReadableStream } from "./pdfPrinter.js";
+import { pipeline } from "stream";
+import createHttpError from "http-errors";
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -259,6 +258,36 @@ router.put("/:id/cover", parseFile.single("cover"), async (req, res, next) => {
     res.send(changedblog);
   } catch (error) {
     res.send(500).send({ message: error.message });
+  }
+});
+
+router.get("/:id/downloadPDF", async (req, resp, next) => {
+  try {
+    const id = req.params.id;
+    const fileAsBuffer = fs.readFileSync(blogsFilePath);
+    const fileAsString = fileAsBuffer.toString();
+    let blogPosts = JSON.parse(fileAsString);
+    const blogPost = blogPosts.find((p) => p.id === id);
+    if (blogPost) {
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=blog-post.pdf"
+      );
+      const source = getPDFReadableStream(blogPost);
+      const destination = resp;
+
+      pipeline(source, destination, (err) => {
+        if (err) {
+          next(err);
+        } else {
+          resp.send(
+            createHttpError(404, `Blog post with the id ${id} not found`)
+          );
+        }
+      });
+    }
+  } catch (err) {
+    next(err);
   }
 });
 

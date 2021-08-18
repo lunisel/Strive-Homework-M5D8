@@ -14,15 +14,22 @@ export const getPDFReadableStream = (data) => {
 
   const docDefinition = {
     content: [
-      data.firstName,
-      `Another paragraph, this time a ${data.lastName}`,
+      {
+        text: blogPost.title,
+        style: "header",
+      },
+      "\n\n\n",
+      blogPost.content,
     ],
+    styles: {
+      header: {
+        fontSize: 18,
+        bold: true,
+      },
+    },
   };
-  const options = {};
-  const pdfReadableStream = printer.createPdfKitDocument(
-    docDefinition,
-    options
-  );
+
+  const pdfReadableStream = printer.createPdfKitDocument(docDefinition);
 
   pdfReadableStream.end();
   return pdfReadableStream;
